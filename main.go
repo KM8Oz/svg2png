@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/pkg/errors"
@@ -84,15 +83,19 @@ func convertHandler(c *gin.Context) {
 	logger.Printf("Received request to convert SVG to PNG: %s %s\n", c.ClientIP(), c.RemoteIP())
 	// svgURL := c.GetHeader("SVG-URL")
 	apiKey := c.GetHeader("X-API-Key")
+	if apiKey == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid apiKey"})
+		return
+	}
 	if apiKey != "eaf9919f6f57f0be0f556c30f2f0fd9dbd0e80ffc5eb836a083e8cc1c99b6fdbc690" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid apiKey"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid apiKey"})
+		return
 	}
 
 	// Get the requested width and height from the query parameters
 	widthStr := c.DefaultQuery("width", "512")
 	svgURL := c.Query("svg_url")
 	heightStr := c.DefaultQuery("height", "512")
-	dpiStr := c.DefaultQuery("dpi", "72")
 
 	// Parse the width, height, and DPI values into integers
 	width, err := strconv.Atoi(widthStr)
@@ -105,67 +108,65 @@ func convertHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid height"})
 		return
 	}
-	dpi, err := strconv.Atoi(dpiStr)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid DPI"})
-		return
-	}
 
 	// Convert the SVG to PNG
-	pngData, err := convertSVGToPNG(svgURL, apiKey, width, height, dpi)
+	pngData, err := convertSVGToPNG(svgURL, width, height)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "Error converting SVG to PNG").Error()})
 		return
 	}
-
+	if len(pngData.Bytes()) == 0 {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "Error converting SVG to PNG").Error()})
+		return
+	}
 	// Set the content type and write the PNG data to the response
-	c.Header("Content-Type", "image/png")
+	c.Header("Content-Type", "application/octet-stream")
 	c.Writer.WriteHeader(http.StatusOK)
-	c.Writer.Write(pngData)
+	c.Writer.Write(pngData.Bytes())
 }
 
-func convertSVGToPNG(svgURL, apiKey string, width, height, dpi int) ([]byte, error) {
+func convertSVGToPNG(svgURL string, width int, height int) (bytes.Buffer, error) {
 	// Read the SVG data from the URL
 	client := &http.Client{}
 
 	// Send a GET request to the URL
 	req, err := http.NewRequest("GET", svgURL, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Error reading SVG data from %v", svgURL))
+		return *bytes.NewBuffer([]byte{}), errors.Wrap(err, fmt.Sprintf("Error reading SVG data from %v", svgURL))
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Error reading SVG data from %v", svgURL))
+		return *bytes.NewBuffer([]byte{}), errors.Wrap(err, fmt.Sprintf("Error reading SVG data from %v", svgURL))
 	}
 	defer resp.Body.Close()
 
 	// Parse the SVG data
 	icon, err := oksvg.ReadIconStream(resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error parsing SVG data")
+		return *bytes.NewBuffer([]byte{}), errors.Wrap(err, "Error parsing SVG data")
 	}
-
+	icon.SetTarget(0, 0, float64(width), float64(height))
 	// create output image
 	rgba := image.NewRGBA(image.Rect(0, 0, width, height))
+	scanner := rasterx.NewScannerGV(width, height, rgba, rgba.Bounds())
+	ras := rasterx.NewDasher(width, height, scanner)
 
 	// draw SVG onto output image
-	icon.SetTarget(0, 0, float64(width), float64(height))
-	icon.Draw(rasterx.NewDasher(width, height, rasterx.NewScannerGV(width, height, rgba, rgba.Bounds())), 1)
-
+	icon.Draw(ras, 1)
+	// Create a new image from the rasterizer output
 	// encode output image as PNG
 	var pngData bytes.Buffer
 	if err := png.Encode(&pngData, rgba); err != nil {
-		return nil, fmt.Errorf("failed to encode PNG: %w", err)
+		return *bytes.NewBuffer([]byte{}), fmt.Errorf("failed to encode PNG: %w", err)
 	}
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	resizedImg := imaging.Resize(img, width, height, imaging.Lanczos)
 	// Encode the image as PNG
-	if err := png.Encode(&pngData, resizedImg); err != nil {
-		return nil, errors.Wrap(err, "Error encoding image as PNG")
+	if err := png.Encode(&pngData, img); err != nil {
+		return *bytes.NewBuffer([]byte{}), errors.Wrap(err, "Error encoding image as PNG")
 	}
 
 	// Return the PNG data
-	return pngData.Bytes(), nil
+	return pngData, nil
 }
 
 func main() {
