@@ -1,0 +1,88 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Convert an SVG image to a PNG image with the specified dimensions.",
+        "title": "Swagger SVG to PNG API",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/convert": {
+            "get": {
+                "consumes": [
+                    "text/plain"
+                ],
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "SVG2PNG"
+                ],
+                "summary": "Convert an SVG image to a PNG image with the specified dimensions.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 512,
+                        "description": "Width of the resulting PNG image",
+                        "name": "width",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 512,
+                        "description": "Height of the resulting PNG image",
+                        "name": "height",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "svg url to convert",
+                        "name": "svg_url",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Binary PNG data",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "X-API-Key",
+            "in": "header"
+        }
+    }
+}

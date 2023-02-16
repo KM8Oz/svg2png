@@ -1,0 +1,60 @@
+basePath: /api/v1
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Convert an SVG image to a PNG image with the specified dimensions.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Swagger SVG to PNG API
+  version: 1.0.0
+paths:
+  /convert:
+    get:
+      consumes:
+      - text/plain
+      parameters:
+      - default: 512
+        description: Width of the resulting PNG image
+        in: query
+        name: width
+        type: integer
+      - default: 512
+        description: Height of the resulting PNG image
+        in: query
+        name: height
+        type: integer
+      - description: svg url to convert
+        in: query
+        name: svg_url
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: Binary PNG data
+          schema:
+            type: string
+        "400":
+          description: Invalid request parameters
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Convert an SVG image to a PNG image with the specified dimensions.
+      tags:
+      - SVG2PNG
+schemes:
+- http
+- https
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"
