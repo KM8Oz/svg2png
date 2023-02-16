@@ -18,11 +18,16 @@
         },
         "version": "1.0.0"
     },
-    "host": "localhost:8080",
+    "host": "svg2png.kmoz.dev",
     "basePath": "/api/v1",
     "paths": {
         "/convert": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "text/plain"
                 ],

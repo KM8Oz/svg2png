@@ -1,5 +1,5 @@
 basePath: /api/v1
-host: localhost:8080
+host: svg2png.kmoz.dev
 info:
   contact:
     email: support@swagger.io
@@ -46,6 +46,8 @@ paths:
           description: Internal server error
           schema:
             type: string
+      security:
+      - ApiKeyAuth: []
       summary: Convert an SVG image to a PNG image with the specified dimensions.
       tags:
       - SVG2PNG

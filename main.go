@@ -39,7 +39,7 @@ import (
 
 // @Tags SVG, SVG2PNG, PNG, CONVERT SVG2PNG, CONVERT SVG, PNGSVG, SVGPNG
 
-// @host localhost:8080
+// @host svg2png.kmoz.dev
 
 // @contact.name   API Support
 
@@ -66,6 +66,7 @@ import (
 // @Failure 400 {string} string "Invalid request parameters"
 // @Failure 500 {string} string "Internal server error"
 // @Router /convert [get]
+// @security ApiKeyAuth
 func convertHandler(c *gin.Context) {
 	// Get the SVG file URL and API key from the request headers
 	// Create a new rotatelogs file writer
@@ -82,7 +83,10 @@ func convertHandler(c *gin.Context) {
 	logger := log.New(writer, "", log.LstdFlags)
 	logger.Printf("Received request to convert SVG to PNG: %s %s\n", c.ClientIP(), c.RemoteIP())
 	// svgURL := c.GetHeader("SVG-URL")
-	apiKey := c.GetHeader("API-Key")
+	apiKey := c.GetHeader("X-API-Key")
+	if apiKey != "eaf9919f6f57f0be0f556c30f2f0fd9dbd0e80ffc5eb836a083e8cc1c99b6fdbc690" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid apiKey"})
+	}
 
 	// Get the requested width and height from the query parameters
 	widthStr := c.DefaultQuery("width", "512")
